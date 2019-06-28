@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"reflect"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,14 +18,19 @@ func main() {
 	client := connect()
 	defer client.Disconnect(context.TODO())
 
-	database := client.Database("DatabaseFoo")
-	collection := database.Collection("CollectionFoo")
+	sc, _ := bsoncodec.NewStructCodec(bsoncodec.DefaultStructTagParser)
+	reg := bson.NewRegistryBuilder().RegisterEncoder(reflect.TypeOf(StructA{}), sc).Build()
+	database := client.Database("DatabaseFoo", &options.DatabaseOptions{
+		Registry: reg,
+	})
+
+	collection := database.Collection("C")
 	collection.Drop(context.TODO())
 
 	_, err = collection.InsertOne(
 		context.TODO(),
 		&StructA{
-			ID: ID("StructA_001"),
+			ID:  ID("StructA_001"),
 			Foo: "Bar",
 		},
 	)
